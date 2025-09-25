@@ -1,0 +1,27 @@
+[project]
+name = "pinn-uff-sistemas-continuos"
+version = "0.1.0"
+description = "PINN com Factory para equações algébricas e EDOs de 2ª ordem"
+authors = [
+    { name = "Joao Monteiro", email = "joaocrmonteiro@gmail.com" },
+    { name = "Ana", email = "ana.b.vasconselos98@gmail.com" }
+]
+readme = "README.md"
+
+# importante: limite superior <3.14, senão o Torch quebra
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    "torch>=2.4,<3.0",
+    "torchvision>=0.19,<1.0",
+    "torchaudio>=2.4,<3.0",
+    "scikit-learn>=1.5,<2.0",
+    "matplotlib>=3.9,<4.0"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
