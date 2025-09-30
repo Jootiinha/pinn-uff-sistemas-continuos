@@ -4,9 +4,9 @@ from typing import List, Any
 import torch
 import torch.optim as optim
 
-from src.configs.bc import DirichletBC, NeumannBC
+from src.configs.bc import DirichletBC, NeumannBC, StressBC
 from src.configs.train_configs import TrainConfigAlgebraic, TrainConfigODE2
-from src.core.equations import QuadraticEquation, ODE2LinearEquation
+from src.core.equations import QuadraticEquation, ODE2LinearEquation, PDEEq
 from src.core.models import MLPBranches, MLP1D
 
 
@@ -139,3 +139,79 @@ class PINNODE2Solver:
         x_in = self._to_model_in(x_plot)
         y = self.model(x_in)
         return y.squeeze(-1).cpu()
+    
+
+class PINNODE4Solver(PINNODE2Solver):
+    def __init__(self,equation: PDEEq,
+                 cfg: TrainConfigODE2,
+                 bcs: List[Any]):
+        self.eq = equation
+        self.cfg = cfg
+        self.bcs = bcs
+        self.model = MLP1D(in_dim=1, hidden=cfg.hidden, depth=cfg.depth, out_dim=1).to(cfg.device)
+        self.opt = optim.Adam(self.model.parameters(), lr=cfg.lr)
+
+        x0, x1 = cfg.domain
+        self._a, self._b = x0, x1
+        # parâmetros de normalização afim x_norm = (x - a)/(b-a) em [0,1]
+        self._scale = 1.0 / (self._b - self._a) if cfg.normalize_x else 1.0
+        self._shift = self._a if cfg.normalize_x else 0.0
+    def _loss_batch(self) -> torch.Tensor:
+        device = self.cfg.device
+        xa, xb = self.cfg.domain
+
+        # Pontos de colação
+        #concentrar pts em xa(1) para evitar derivadas grandes 
+        alpha = 2
+        x = torch.rand(self.cfg.n_collocation, 1, device=device)**alpha * (xb - xa) + xa
+        x.requires_grad_(True)
+        x_in = self._to_model_in(x)
+
+        # Saída do modelo e derivadas
+        y = self.model(x_in)
+        dy_dx_in = self._grad(y, x_in)
+        scale = self._scale if self.cfg.normalize_x else 1.0
+        dy = dy_dx_in * scale
+        d2y_dx_in2 = self._grad(dy_dx_in, x_in)
+        d2y = d2y_dx_in2 * (scale ** 2)
+
+        # Decomposição da quarta ordem
+        g = d2y + (1 / x) * dy
+        dg_dx_in = self._grad(g, x_in)
+        dg = dg_dx_in * scale
+        d2g_dx_in2 = self._grad(dg_dx_in, x_in)
+        d2g = d2g_dx_in2 * (scale ** 2)
+
+        # Resíduo da PDE
+        resid = self.eq.residualPDE(x, dg, d2g)
+        loss_pde = (resid**2).mean()
+
+        # Perda de BCs
+        bc_terms = []
+        for bc in self.bcs:
+            x_b = torch.tensor([[bc.x_b]], device=device, requires_grad=True)
+            x_b_in = self._to_model_in(x_b)
+            y_b_pred = self.model(x_b_in)
+            if isinstance(bc, DirichletBC):
+                bc_terms.append((y_b_pred - bc.y_b) ** 2)
+            elif isinstance(bc, NeumannBC):
+                dy_b_dx_in = self._grad(y_b_pred, x_b_in)
+                dy_b = dy_b_dx_in * scale
+                bc_terms.append((dy_b - bc.g_b) ** 2)
+            elif isinstance(bc, StressBC):
+                x_b = torch.tensor([[bc.x_b]], device=device, requires_grad=True)
+                x_b_in = self._to_model_in(x_b)
+                phi = self.model(x_b_in)
+                stress_val = bc.stress_fn(phi, x_b_in, self)
+                bc_terms.append((stress_val - bc.target)**2)
+            else:
+                raise ValueError("Tipo de BC não suportado.")
+        loss_bc = torch.stack([t.mean() for t in bc_terms]).mean() if bc_terms else torch.tensor(0.0, device=device)
+
+        return self.cfg.w_pde * loss_pde + self.cfg.w_bc * loss_bc, (loss_pde.item(), loss_bc.item())
+
+
+
+
+
+
