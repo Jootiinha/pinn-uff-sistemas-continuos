@@ -1,4 +1,6 @@
 import math
+import csv
+import os
 from typing import List, Any
 
 import torch
@@ -121,16 +123,28 @@ class PINNODE2Solver:
 
         return self.cfg.w_pde * loss_pde + self.cfg.w_bc * loss_bc, (loss_pde.item(), loss_bc.item())
 
-    def train(self, verbose_every: int = 500):
+    def train(self, verbose_every: int = 500, log_file: str = "training_log.csv"):
         self.model.train()
-        for epoch in range(1, self.cfg.epochs + 1):
-            loss, (lpde, lbc) = self._loss_batch()
-            self.opt.zero_grad()
-            loss.backward()
-            self.opt.step()
-            if epoch % verbose_every == 0 or epoch == 1 or epoch == self.cfg.epochs:
-                print(f"[ODE2 {epoch:05d}] loss={loss.item():.6e} (pde={lpde:.2e}, bc={lbc:.2e})")
 
+        os.makedirs('docs', exist_ok=True)
+
+        with open(f'docs/{log_file}', "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["epoch", "loss", "pde", "bc"])
+
+            for epoch in range(1, self.cfg.epochs + 1):
+                loss, (lpde, lbc) = self._loss_batch()
+                self.opt.zero_grad()
+                loss.backward()
+                self.opt.step()
+
+                if epoch % verbose_every == 0 or epoch == 1 or epoch == self.cfg.epochs:
+                    # salva no arquivo
+                    writer.writerow([epoch, loss.item(), lpde, lbc])
+
+                    # mostra no console
+                    print(f"[ODE {epoch:05d}] loss={loss.item():.6e} (pde={lpde:.2e}, bc={lbc:.2e})")
+            
     @torch.no_grad()
     def predict(self, x_plot: torch.Tensor) -> torch.Tensor:
         """Retorna y(x_plot) na CPU."""
@@ -175,15 +189,15 @@ class PINNODE4Solver(PINNODE2Solver):
         d2y_dx_in2 = self._grad(dy_dx_in, x_in)
         d2y = d2y_dx_in2 * (scale ** 2)
 
-        # Decomposição da quarta ordem
-        g = d2y + (1 / x) * dy
-        dg_dx_in = self._grad(g, x_in)
-        dg = dg_dx_in * scale
-        d2g_dx_in2 = self._grad(dg_dx_in, x_in)
-        d2g = d2g_dx_in2 * (scale ** 2)
+        g = d2y+dy
+        dg_dx_x= self._grad(g/x,x)
+        dg_dx = self._grad(g,x) # var auxiliar
+        d2g_dx = self._grad(dg_dx,x)
 
-        # Resíduo da PDE
-        resid = self.eq.residualPDE(x, dg, d2g)
+        # resid = dg_dx_x * d2g_dx ## EDO 4° ordem
+
+        # Resíduo da EDO 4° ordem
+        resid = self.eq.residualPDE(dg_dx_x, d2g_dx)
         loss_pde = (resid**2).mean()
 
         # Perda de BCs
@@ -210,7 +224,8 @@ class PINNODE4Solver(PINNODE2Solver):
 
         return self.cfg.w_pde * loss_pde + self.cfg.w_bc * loss_bc, (loss_pde.item(), loss_bc.item())
 
-
+    def train(self, verbose_every = 500, log_file = "training_log.csv"):
+        return super().train(verbose_every, log_file)
 
 
 
