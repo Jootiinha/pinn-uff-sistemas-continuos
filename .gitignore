@@ -2,3 +2,6 @@
 __pycache__/
 *.py[codz]
 *$py.class 
+
+#ignore docs created 
+/docs
