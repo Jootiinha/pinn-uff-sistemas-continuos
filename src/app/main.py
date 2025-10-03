@@ -16,6 +16,10 @@ def main():
     print("\nTreinando PINN (EDO 4ª ordem)...")
     log_path = "docs/pde_4th_order_log.csv"
     ode_solver.train(verbose_every=500, log_file=log_path)
+
+    # Salvar modelo
+    model_path = "docs/pde_4th_order_model.pth"
+    ode_solver.save_model(model_path)
     
     # Gráficos
     graphs.create_trainning_graph(log_path, "docs/pde_4th_order_metrics.png")

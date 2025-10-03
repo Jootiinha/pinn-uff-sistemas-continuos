@@ -114,6 +114,20 @@ class PINNSolver:
         y = self.model(x_in)
         return y.squeeze(-1).cpu()
 
+    def save_model(self, path: str):
+        """Salva o estado do modelo em um arquivo."""
+        model_dir = os.path.dirname(path)
+        if model_dir:
+            os.makedirs(model_dir, exist_ok=True)
+        torch.save(self.model.state_dict(), path)
+        print(f"Modelo salvo em {path}")
+
+    def load_model(self, path: str):
+        """Carrega o estado do modelo de um arquivo."""
+        self.model.load_state_dict(torch.load(path, map_location=self.cfg.device))
+        self.model.eval()
+        print(f"Modelo carregado de {path}")
+
 
 class PINNODE2Solver(PINNSolver):
     def __init__(self, equation: ODE2LinearEquation, cfg: TrainConfigODE2, bcs: List[Any]):
