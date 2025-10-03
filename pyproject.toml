@@ -26,3 +26,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+poethepoet = "^0.27.0"
+
+[tool.poe.tasks]
+start = "python -B -m src.app.main"
+predict = "python -B -m src.app.predict"
