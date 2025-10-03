@@ -48,7 +48,6 @@ class PINNSolver:
                 # Esta é a linha que efetivamente atualiza os pesos do modelo__
                 #   , utilizando o otimizador (neste caso, Adam) 
                 #   para ajustar os parâmetros com base nos gradientes calculados.
-
                 self.opt.step()
 
                 if epoch % verbose_every == 0 or epoch == 1 or epoch == self.cfg.epochs:
