@@ -12,6 +12,11 @@ class ODE4thOrderEquation(BaseEquation):
         """
         Resíduo da EDO: d^4(phi)/dr^4 = 0
         A formulação é complexa e baseada em uma função auxiliar 'g'.
+        Definição do Resíduo (O Coração da Equação):
+            O resíduo é a parte mais importante. 
+            É a própria equação diferencial escrita de forma que seu resultado
+                seja zero.
+            A rede neural será treinada para forçar esse valor a ser zero em todos os pontos do domínio.
         """
         # Esta é a formulação que estava no solver original.
         # g = y'' + y' (não usado diretamente aqui, mas é a base)
