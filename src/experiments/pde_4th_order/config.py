@@ -1,6 +1,6 @@
 from src.configs.bc import StressBC
 from src.configs.train_configs import TrainConfigODE4
-from src.core.equations import EquationFactory
+from src.core.equations.factory import EquationFactory
 
 # Domínio
 a = 1.0

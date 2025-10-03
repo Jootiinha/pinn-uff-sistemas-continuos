@@ -31,4 +31,4 @@ package-mode = false
 poethepoet = "^0.27.0"
 
 [tool.poe.tasks]
-start = "python -B src/app/main.py"
+start = "python -B -m src.app.main"

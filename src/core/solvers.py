@@ -9,7 +9,9 @@ import torch.optim as optim
 
 from src.configs.bc import DirichletBC, NeumannBC, StressBC
 from src.configs.train_configs import TrainConfigAlgebraic, TrainConfigODE2, TrainConfigODE4
-from src.core.equations import QuadraticEquation, ODE2LinearEquation, ODE4thOrderEquation
+from src.core.equations.ode2_linear import ODE2LinearEquation
+from src.core.equations.ode4_elasticity import ODE4thOrderEquation
+from src.core.equations.quadratic import QuadraticEquation
 from src.core.models import MLPBranches, MLP1D
 
 
