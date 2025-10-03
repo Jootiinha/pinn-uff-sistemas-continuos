@@ -32,3 +32,8 @@ class TrainConfigODE2:
     w_bc: float = 1.0
     # opcional: normalização do domínio para estabilidade
     normalize_x: bool = True
+
+
+@dataclass
+class TrainConfigODE4(TrainConfigODE2):
+    pass
