@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from typing import Callable
+
+import torch
 
 
 # Representação de BCs simples:
@@ -13,3 +16,9 @@ class DirichletBC:
 class NeumannBC:
     x_b: float
     g_b: float  # valor de y'(x_b)
+
+@dataclass
+class StressBC:
+    x_b: float
+    stress_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+    target: float

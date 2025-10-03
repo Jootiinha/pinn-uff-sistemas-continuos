@@ -1,67 +1,94 @@
 import math
 import random
-
+import matplotlib.pyplot as plt
 import torch
+import numpy as np
 
-from src.configs.bc import DirichletBC, NeumannBC
+from src.configs.bc import DirichletBC, NeumannBC,StressBC
 from src.configs.train_configs import TrainConfigAlgebraic, TrainConfigODE2
-from src.core.equations import EquationFactory, QuadraticParams, ODE2LinearParams
-from src.core.solvers import PINNAlgebraicSolver, PINNODE2Solver
-
+from src.core.equations import EquationFactory, QuadraticParams, ODE2LinearParams,  PDEEq
+from src.core.solvers import PINNAlgebraicSolver, PINNODE2Solver, PINNODE4Solver
+from src.core import graphs
 
 def main():
-    # -----------------------
-    # (A) Algébrico: x^2 - 5x + 6 = 0  -> raízes 2 e 3
-    # -----------------------
-    quad_params = QuadraticParams(a=1.0, b=-5.0, c=6.0)
-    eq_quad = EquationFactory.create("quadratic", params=quad_params)
-    alg_cfg = TrainConfigAlgebraic(epochs=2000, device="cpu")
-    alg_solver = PINNAlgebraicSolver(eq_quad, alg_cfg)
-    print("Treinando PINN (algébrico) para raízes de 2º grau...")
-    alg_solver.train(verbose_every=400)
-    print("Raízes analíticas:", eq_quad.analytic_roots())
 
-    # -----------------------
-    # (B) EDO 2ª ordem: y'' + y = 0
-    # Condições: y(0)=0 (Dirichlet) e y'(0)=1 (Neumann) -> y = sin(x)
-    # Domínio: [0, pi/2]
-    # -----------------------
+    """
+    Treinamento de uma Physics-Informed Neural Network (PINN) para resolver 
+    uma equação diferencial de 4ª ordem:
+
+        d^4(phi)/dr^4 = 0
+
+    Domínio: r ∈ [1.0, 2.0]
+
+    Condições de contorno:
+    - Trr(a) = 0 em r = 1.0
+    - Ttt(b) = 0 em r = 2.0
+
+    Configuração do treino:
+    - Épocas: 2000
+    - Pontos de colocation (resíduo PDE): 256
+    - Otimizador: Adam com learning rate 1e-3
+    - Arquitetura da rede: 4 camadas ocultas, 64 neurônios por camada
+    - Pesos da loss: PDE = 1.0, BC = 1.0
+    - Normalização do domínio: desativada
+
+    Fluxo do script:
+    1. Cria a equação via EquationFactory.
+    2. Define condições de contorno usando StressBC.
+    3. Configura o solver PINNODE4Solver.
+    4. Treina a rede, logando perdas PDE e BC a cada N épocas.
+    5. Avalia a rede no domínio e gera gráficos de convergência e solução.
+    """
+    a= 1.0  # a=r
+    b=2.0   #b=r
+
     device = "cpu"
-    p = lambda x: torch.zeros_like(x)         # p(x)=0
-    q = lambda x: torch.ones_like(x)          # q(x)=1
-    r = lambda x: torch.zeros_like(x)         # r(x)=0
-    ode_params = ODE2LinearParams(p=p, q=q, r=r)
-    eq_ode = EquationFactory.create("ode2_linear", params=ode_params)
+ 
+    #TODO preciso desse param ?
+    # r = lambda x: x          
+    # ode_params = PDEParams(x=r)
+    # eq_ode = EquationFactory.create("pde_equation", params=ode_params)
+    eq_ode = EquationFactory.create("pde_equation",params=None)
 
     bcs = [
-        DirichletBC(x_b=0.0, y_b=0.0),  # y(0)=0
-        NeumannBC(x_b=0.0, g_b=1.0),    # y'(0)=1
+        StressBC(x_b=a, stress_fn=PDEEq.trr, target=0.0), #condição de contorno Trr = 0
+        StressBC(x_b=b, stress_fn=PDEEq.ttt, target=0.0),#condição de contorno Ttt = 0
     ]
     ode_cfg = TrainConfigODE2(
-        epochs=6000,
+        epochs=2000,
         n_collocation=256,
         lr=1e-3,
         hidden=64,
         depth=4,
         device=device,
-        domain=(0.0, math.pi/2),
+        domain=(a, b),
         w_pde=1.0,
         w_bc=1.0,
-        normalize_x=True
+        normalize_x=False
     )
-    ode_solver = PINNODE2Solver(eq_ode, ode_cfg, bcs)
-    print("\nTreinando PINN (EDO 2ª ordem) para y'' + y = 0, y(0)=0, y'(0)=1 ...")
+    ode_solver = PINNODE4Solver(eq_ode, ode_cfg, bcs)
+
+    ode_solver.model._init()
+    
+    print("\nTreinando PINN (EDO 4ª ordem) para var4phi = 0, Trr(a)=0, Ttt(b)=0 ...")
     ode_solver.train(verbose_every=500)
+    graphs.create_trainning_graph()
 
-    # Avaliação em uma malha
-    xs = torch.linspace(0.0, math.pi/2, 101)
-    y_pred = ode_solver.predict(xs)
-    # Comparação com sin(x)
-    y_true = torch.sin(xs).cpu()
-    max_abs_err = (y_pred - y_true).abs().max().item()
-    print(f"Erro máximo |y_pred - sin(x)| no domínio: {max_abs_err:.3e}")
+    # Avaliar rede no domínio
+    rs = torch.linspace(a, b, 200).view(-1,1)
+    phi_pred = ode_solver.predict(rs)
+    graphs.create_phi_graph(phi_pred)
+    # # -----------------------
+    # # Gráficos
+    # # -----------------------
+    # phi_pred_np = phi_pred.detach().numpy()
 
-    # Dica: plote xs vs y_pred para inspecionar a solução.
+    # # # Curvas PINN 
+    # plt.subplot(1,2,1)
+    # plt.plot(phi_pred_np, "--", label="PINN", color="blue")
+    # plt.grid(True)
+    # plt.tight_layout(pad=2.0)
+    # plt.show()
 
 
 if __name__ == "__main__":

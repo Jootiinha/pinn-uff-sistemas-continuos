@@ -85,6 +85,33 @@ class ODE2LinearEquation(BaseEquation):
         return d2y + p * dy + q * y - r
 
 
+# @dataclass
+# class PDEParams:
+#     x: Callable[[torch.Tensor], torch.Tensor]  # x(x)
+
+
+class PDEEq(BaseEquation):
+
+    # def __init__(self, params: PDEParams):
+    #     self.x_fun = params.x
+
+
+    def residualPDE(self,dg_dx_x: any ,d2g_dx:any):
+        # x = self.x_fun(x)
+
+        return dg_dx_x * d2g_dx
+    
+    @staticmethod
+    def trr(phi, x_in, solver):
+        phi_r = solver._grad(phi/x_in, x_in) * solver._scale
+        return phi_r
+    
+    @staticmethod
+    def ttt(phi, x_in, solver):
+        phi_r = solver._grad(phi, x_in) * solver._scale
+        phi_rr = solver._grad(phi_r, x_in) * (solver._scale**2)
+        return phi_rr
+
 # ------------------------------
 # Factory
 # ------------------------------
@@ -105,3 +132,5 @@ class EquationFactory:
 
 EquationFactory.register("quadratic", lambda params: QuadraticEquation(params=params))
 EquationFactory.register("ode2_linear", lambda params: ODE2LinearEquation(params=params))
+# EquationFactory.register("pde_equation", lambda params: PDEEq(params=params))
+EquationFactory.register("pde_equation", lambda params: PDEEq())
