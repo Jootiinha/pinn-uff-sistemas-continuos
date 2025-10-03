@@ -1,8 +1,8 @@
 from typing import Dict, Any
 
 from .base import BaseEquation
-from .quadratic import QuadraticEquation, QuadraticParams
-from .ode2_linear import ODE2LinearEquation, ODE2LinearParams
+from .quadratic import QuadraticEquation
+from .ode2_linear import ODE2LinearEquation
 from .ode4_elasticity import ODE4thOrderEquation
 
 

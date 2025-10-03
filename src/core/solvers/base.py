@@ -4,8 +4,6 @@ import torch
 import torch.optim as optim
 
 from src.core.models import MLP1D
-from src.configs.train_configs import TrainConfigODE2, TrainConfigODE4
-
 
 class PINNSolver:
     """Classe base para solvers de PINN para EDOs."""
