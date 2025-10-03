@@ -11,6 +11,13 @@ from src.core.solvers.base import PINNSolver
 class PINNODE2Solver(PINNSolver):
     def __init__(self, equation: ODE2LinearEquation, cfg: TrainConfigODE2, bcs: List[Any]):
         super().__init__(equation, cfg, bcs)
+        
+        # Adiciona BCs de Dirichlet se y_a ou y_b forem especificados
+        xa, xb = self.cfg.domain
+        if cfg.y_a is not None:
+            self.bcs.append(DirichletBC(x_b=xa, y_b=cfg.y_a))
+        if cfg.y_b is not None:
+            self.bcs.append(DirichletBC(x_b=xb, y_b=cfg.y_b))
 
     def _loss_batch(self) -> tuple[torch.Tensor, tuple[float, float]]:
         device = self.cfg.device
