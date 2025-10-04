@@ -103,8 +103,8 @@ class PDEEq(BaseEquation):
     
     @staticmethod
     def trr(phi, x_in, solver):
-        phi_r = solver._grad(phi/x_in, x_in) * solver._scale
-        return phi_r
+        phi_r = solver._grad(phi, x_in) * solver._scale
+        return phi_r / x_in
     
     @staticmethod
     def ttt(phi, x_in, solver):
