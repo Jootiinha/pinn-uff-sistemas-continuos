@@ -39,10 +39,47 @@ class ODE4thOrderEquation(BaseEquation):
         # Para simplificar e evitar o dy, vamos usar a formulação d4y=0
         return d4y
 
-    def trr(self, x: torch.Tensor, y: torch.Tensor, dy: torch.Tensor) -> torch.Tensor:
+    def trr(self, x: torch.Tensor, dy: torch.Tensor) -> torch.Tensor:
         """ Tensão radial: Trr = (1/r) * d(phi)/dr """
         return dy / x
 
     def ttt(self, x: torch.Tensor, d2y: torch.Tensor) -> torch.Tensor:
         """ Tensão tangencial: Ttt = d2(phi)/dr2 """
         return d2y
+
+    def moment(self, x: torch.Tensor, d2y: torch.Tensor) -> torch.Tensor:
+        """
+        Calcula o momento M = - integral(Ttt * r) dr
+        """
+        integrand = self.ttt(x, d2y) * x
+        
+        # Garante que os tensores estão ordenados para a integração
+        sorted_indices = torch.argsort(x.squeeze())
+        sorted_x = x[sorted_indices]
+        sorted_integrand = integrand[sorted_indices]
+        
+        # Calcula a integral usando a regra do trapézio
+        m = torch.trapz(sorted_integrand.squeeze(), sorted_x.squeeze())
+        return -m
+
+    def moment_r(self, x: torch.Tensor, d2y: torch.Tensor) -> torch.Tensor:
+        """
+        Calcula o momento M(r) = - integral_de_a_ate_r(Ttt * s) ds
+        """
+        integrand = self.ttt(x, d2y) * x
+        
+        # Garante que os tensores estão ordenados para a integração
+        sorted_indices = torch.argsort(x.squeeze())
+        sorted_x = x[sorted_indices]
+        sorted_integrand = integrand[sorted_indices]
+        
+        # Calcula a integral cumulativa usando a regra do trapézio
+        # torch.cumulative_trapezoid retorna um tensor de tamanho N-1, então adicionamos um 0 no início
+        cumulative_m_sorted = torch.cat([torch.tensor([0.0], device=x.device), torch.cumsum(0.5 * (sorted_integrand.squeeze()[1:] + sorted_integrand.squeeze()[:-1]) * (sorted_x.squeeze()[1:] - sorted_x.squeeze()[:-1]), dim=0)])
+
+        # Precisamos "desordenar" o resultado para corresponder à ordem original de 'x'
+        # Criamos um tensor para o resultado e o preenchemos na ordem correta
+        unsorted_m = torch.zeros_like(cumulative_m_sorted)
+        unsorted_m[sorted_indices] = cumulative_m_sorted
+
+        return -unsorted_m.view(-1, 1)

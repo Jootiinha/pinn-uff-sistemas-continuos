@@ -3,7 +3,7 @@ from typing import List, Any
 
 import torch
 
-from src.configs.bc import DirichletBC, NeumannBC, StressBC
+from src.configs.bc import DirichletBC, NeumannBC, StressBC, MomentBC
 from src.configs.train_configs import TrainConfigODE4
 from src.core.equations.ode4_elasticity import ODE4thOrderEquation
 from src.core.solvers.base import PINNSolver
@@ -42,6 +42,14 @@ class PINNODE4Solver(PINNSolver):
 
         bc_terms = []
         for bc in self.bcs:
+            # Condições de contorno integrais (usam todos os pontos de colocação)
+            if isinstance(bc, MomentBC):
+                # A função de momento precisa de 'x' e 'd2y' sobre o domínio
+                calculated_moment = bc.moment_fn(x, d2y)
+                bc_terms.append((calculated_moment - bc.target) ** 2)
+                continue
+
+            # Condições de contorno pontuais (usam um ponto específico x_b)
             x_b = torch.tensor([[bc.x_b]], device=device, requires_grad=True)
             x_b_in = self._to_model_in(x_b)
             y_b = self.model(x_b_in)
@@ -52,7 +60,6 @@ class PINNODE4Solver(PINNSolver):
                 d2y_b_dx_in2 = self._grad(dy_b_dx_in, x_b_in)
                 d2y_b = d2y_b_dx_in2 * (self._scale ** 2)
 
-                # Inspeciona a assinatura da função de stress para passar apenas os argumentos necessários
                 sig = inspect.signature(bc.stress_fn)
                 kwargs = {'x': x_b, 'y': y_b, 'dy': dy_b, 'd2y': d2y_b}
                 pass_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
@@ -66,9 +73,26 @@ class PINNODE4Solver(PINNSolver):
                 dy_b = dy_b_dx_in * self._scale
                 bc_terms.append((dy_b - bc.g_b) ** 2)
             else:
-                raise ValueError("Tipo de BC não suportado.")
+                raise ValueError(f"Tipo de BC não suportado: {type(bc)}")
         
         loss_bc = torch.stack([t.mean() for t in bc_terms]).mean() if bc_terms else torch.tensor(0.0, device=device)
 
         total_loss = self.cfg.w_pde * loss_pde + self.cfg.w_bc * loss_bc
         return total_loss, (loss_pde.item(), loss_bc.item())
+
+    def calculate_moment(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Calcula o momento M usando a rede treinada.
+        """
+        self.model.eval()
+        x.requires_grad_(True)
+        x_in = self._to_model_in(x)
+
+        y = self.model(x_in)
+        dy_dx_in = self._grad(y, x_in)
+        d2y_dx_in2 = self._grad(dy_dx_in, x_in)
+        d2y = d2y_dx_in2 * (self._scale ** 2)
+
+        # Usa a função de momento da equação
+        moment_val = self.eq.moment(x, d2y)
+        return moment_val

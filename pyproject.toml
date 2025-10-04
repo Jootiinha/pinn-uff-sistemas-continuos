@@ -17,7 +17,8 @@ dependencies = [
     "torchaudio>=2.4,<3.0",
     "scikit-learn>=1.5,<2.0",
     "matplotlib>=3.9,<4.0",
-    "pandas (>=2.3.3,<3.0.0)"
+    "pandas (>=2.3.3,<3.0.0)",
+    "pyyaml>=6.0,<7.0"
 ]
 
 [build-system]
@@ -31,5 +32,5 @@ package-mode = false
 poethepoet = "^0.27.0"
 
 [tool.poe.tasks]
-start = "python -B -m src.app.main"
+start = "python -B -m src.app.main src/experiments/pde_4th_order/experiment.yaml"
 predict = "python -B -m src.app.predict"

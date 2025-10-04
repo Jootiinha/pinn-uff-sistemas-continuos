@@ -22,3 +22,8 @@ class StressBC:
     x_b: float
     stress_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
     target: float
+
+@dataclass
+class MomentBC:
+    moment_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+    target: float

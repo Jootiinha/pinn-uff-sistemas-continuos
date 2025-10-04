@@ -1,0 +1,49 @@
+experiment_name: "pde_4th_order"
+
+# Dispositivo de treino ("cpu" ou "cuda")
+device: "cpu"
+
+# Domínio da equação [a, b]
+domain:
+  a: 0.062549
+  b: 0.063469
+
+# Definição da equação a ser resolvida
+equation:
+  name: "ode4_elasticity"
+
+# Configurações de treinamento da PINN
+training:
+  epochs: 2000
+  n_collocation: 256
+  learning_rate: 0.001
+  normalize_x: true
+  # Pesos para as funções de perda
+  weights:
+    pde: 1.0
+    bc: 1.0
+  # Configuração da arquitetura da rede neural
+  model:
+    depth: 4
+    hidden: 64
+  # Condições de Dirichlet aplicadas nos extremos do domínio (opcional)
+  dirichlet_bcs:
+    y_a: 68.073
+    y_b: 73.328
+
+# Lista de condições de contorno (BCs)
+boundary_conditions:
+  - type: "StressBC"
+    point: "a" # Pode ser 'a' ou 'b' para usar os valores do domínio
+    stress_function: "trr"
+    target: 0.0
+
+  - type: "StressBC"
+    point: "b"
+    stress_function: "ttt"
+    target: 0.0
+
+  - type: "MomentBC"
+    # Esta é uma BC integral, não depende de um ponto
+    moment_function: "moment"
+    target: -1000.0
