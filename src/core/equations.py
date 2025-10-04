@@ -111,6 +111,29 @@ class PDEEq(BaseEquation):
         phi_r = solver._grad(phi, x_in) * solver._scale
         phi_rr = solver._grad(phi_r, x_in) * (solver._scale**2)
         return phi_rr
+    
+    @staticmethod
+    def momento(ttt_val, x_in):
+        from scipy.integrate import quad
+
+        # Integral de A até B de (ttt_val * x dx) * -1
+        def m(x):
+            print(12*'=')
+            print(ttt_val[0])
+            print(12*'=')
+            return ttt_val[0]
+        
+        a = 60.0    #  a = r
+        b = 01.0    #  b = r
+
+        momento, _erro = quad(m, a, b)
+
+        print(12*'=')
+        print(momento)
+        print(12*'=')
+
+        
+        return momento
 
 # ------------------------------
 # Factory

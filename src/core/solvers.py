@@ -156,9 +156,11 @@ class PINNODE2Solver:
     
 
 class PINNODE4Solver(PINNODE2Solver):
-    def __init__(self,equation: PDEEq,
-                 cfg: TrainConfigODE2,
-                 bcs: List[Any]):
+    def __init__(
+            self,equation: PDEEq,
+            cfg: TrainConfigODE2,
+            bcs: List[Any]
+        ):
         self.eq = equation
         self.cfg = cfg
         self.bcs = bcs
@@ -167,15 +169,17 @@ class PINNODE4Solver(PINNODE2Solver):
 
         x0, x1 = cfg.domain
         self._a, self._b = x0, x1
+
         # parâmetros de normalização afim x_norm = (x - a)/(b-a) em [0,1]
         self._scale = 1.0 / (self._b - self._a) if cfg.normalize_x else 1.0
         self._shift = self._a if cfg.normalize_x else 0.0
+
     def _loss_batch(self) -> torch.Tensor:
         device = self.cfg.device
         xa, xb = self.cfg.domain
 
         # Pontos de colação
-        #concentrar pts em xa(1) para evitar derivadas grandes 
+        # concentrar pts em xa(1) para evitar derivadas grandes 
         alpha = 2
         x = torch.rand(self.cfg.n_collocation, 1, device=device)**alpha * (xb - xa) + xa
         x.requires_grad_(True)
@@ -224,9 +228,26 @@ class PINNODE4Solver(PINNODE2Solver):
 
         return self.cfg.w_pde * loss_pde + self.cfg.w_bc * loss_bc, (loss_pde.item(), loss_bc.item())
 
+    @torch.enable_grad()
+    def predict_with_stress(self, x_plot: torch.Tensor):
+        """Retorna phi(x), Trr(x), Ttt(x) na CPU."""
+        self.model.eval()
+        x_plot = x_plot.view(-1, 1).to(self.cfg.device)
+        x_plot.requires_grad_(True)
+        
+        x_in = self._to_model_in(x_plot)
+        phi = self.model(x_in)
+
+        trr_val = PDEEq.trr(phi, x_in, self)
+        ttt_val = PDEEq.ttt(phi, x_in, self)
+
+        momento_val = PDEEq.momento(ttt_val, x_in)
+
+        return (
+            phi.detach().squeeze(-1).cpu(),
+            trr_val.detach().squeeze(-1).cpu(),
+            ttt_val.detach().squeeze(-1).cpu()
+        )
+
     def train(self, verbose_every = 500, log_file = "training_log.csv"):
         return super().train(verbose_every, log_file)
-
-
-
-

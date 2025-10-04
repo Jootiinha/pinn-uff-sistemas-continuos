@@ -11,8 +11,8 @@ from src.core.solvers import PINNAlgebraicSolver, PINNODE2Solver, PINNODE4Solver
 from src.core import graphs
 
 def main():
-    a = 2.0     # a=r
-    b = 1.0     #b=r
+    a = 60.0    #  a = r
+    b = 01.0    #  b = r
 
     device = "cpu"
  
@@ -28,7 +28,7 @@ def main():
     ]
     
     ode_cfg = TrainConfigODE2(
-        epochs=6000,
+        epochs=2500,
         n_collocation=512,
         lr=1e-3,
         hidden=64,
@@ -49,8 +49,11 @@ def main():
 
     # Avaliar rede no domínio
     rs = torch.linspace(a, b, 200).view(-1,1)
-    phi_pred = ode_solver.predict(rs)
+
+    phi_pred, trr_pred, ttt_pred = ode_solver.predict_with_stress(rs)
     graphs.create_radius_graph(rs, phi_pred)
+    graphs.create_stress_graph(rs, phi_pred, trr_pred, ttt_pred)
+    graphs.create_moment_graph(rs, ttt_pred)
 
 
 if __name__ == "__main__":

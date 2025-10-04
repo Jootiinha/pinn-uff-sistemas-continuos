@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def create_trainning_graph():
@@ -53,5 +54,72 @@ def create_radius_graph(rs: any, phi_pred: any, phi_analytic: any = None):
     plt.legend()
     plt.grid(True)
     plt.savefig("docs/phi_vs_radius.png", dpi=300)
+    plt.show()
+    plt.close()
+
+
+def create_stress_graph(rs, phi_pred, trr_pred, ttt_pred):
+    """Cria um gráfico de phi, Trr e Ttt em função do raio r."""
+    rs_np = rs.detach().numpy()
+    phi_pred_np = phi_pred.detach().numpy()
+    trr_pred_np = trr_pred.detach().numpy()
+    ttt_pred_np = ttt_pred.detach().numpy()
+
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    # Eixo para Phi
+    color = 'tab:blue'
+    ax1.set_xlabel("Raio (r)")
+    ax1.set_ylabel("Phi(r)", color=color)
+    ax1.plot(rs_np, phi_pred_np, '--', label="Phi (PINN)", color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.grid(True, which="both", ls="--")
+
+    # Eixo para Tensões
+    ax2 = ax1.twinx()
+    color_trr = 'tab:red'
+    color_ttt = 'tab:green'
+    ax2.set_ylabel("Tensão", color='black')
+    ax2.plot(rs_np, trr_pred_np, label="Trr (PINN)", color=color_trr)
+    ax2.plot(rs_np, ttt_pred_np, label="Ttt (PINN)", color=color_ttt)
+    ax2.tick_params(axis='y', labelcolor='black')
+
+    # Legendas
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, loc='best')
+
+    plt.title("Solução para Phi(r) e Tensões (Trr, Ttt)")
+    plt.savefig("docs/stress_vs_radius.png", dpi=300)
+    plt.show()
+    plt.close()
+
+
+def create_moment_graph(rs, ttt_pred):
+    """Cria um gráfico do momento em função do raio r, calculado como a integral de r * Ttt(r)."""
+    rs_np = rs.detach().numpy().flatten()
+    ttt_pred_np = ttt_pred.detach().numpy().flatten()
+
+    # Calcula o integrando: r * Ttt(r)
+    integrand = rs_np * ttt_pred_np
+
+    # Calcula a integral cumulativa usando a regra do trapézio
+    # M(r) = ∫[de b a r] (x * Ttt(x)) dx, onde 'b' é o primeiro valor em rs_np
+    dr = rs_np[1] - rs_np[0]  # Assumindo espaçamento uniforme
+    
+    # Usamos np.cumsum para uma aproximação da integral cumulativa
+    cumulative_integral = np.cumsum((integrand[:-1] + integrand[1:]) / 2) * dr
+    
+    # Adiciona um zero no início para que o array tenha o mesmo tamanho de rs_np
+    moment = np.insert(cumulative_integral, 0, 0)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(rs_np, moment, "--", label="Momento (PINN)", color="purple")
+    plt.xlabel("Raio (r)")
+    plt.ylabel("Momento M(r)")
+    plt.title("Momento em função do Raio")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("docs/moment_vs_radius.png", dpi=300)
     plt.show()
     plt.close()
