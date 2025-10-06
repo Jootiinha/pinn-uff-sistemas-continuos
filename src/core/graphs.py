@@ -95,31 +95,95 @@ def create_stress_graph(rs, phi_pred, trr_pred, ttt_pred):
     plt.close()
 
 
-def create_moment_graph(rs, ttt_pred):
-    """Cria um gráfico do momento em função do raio r, calculado como a integral de r * Ttt(r)."""
-    rs_np = rs.detach().numpy().flatten()
-    ttt_pred_np = ttt_pred.detach().numpy().flatten()
+# # def create_moment_graph(rs, moment):
+#     """Cria um gráfico do momento em função do raio r, calculado como a integral de r * Ttt(r)."""
+#     rs_np = rs.detach().numpy().flatten()
+#     ttt_pred_np = ttt_pred.detach().numpy().flatten()
 
-    # Calcula o integrando: r * Ttt(r)
-    integrand = rs_np * ttt_pred_np
+#     # Calcula o integrando: r * Ttt(r)
+#     integrand = rs_np * ttt_pred_np
 
-    # Calcula a integral cumulativa usando a regra do trapézio
-    # M(r) = ∫[de b a r] (x * Ttt(x)) dx, onde 'b' é o primeiro valor em rs_np
-    dr = rs_np[1] - rs_np[0]  # Assumindo espaçamento uniforme
+#     # Calcula a integral cumulativa usando a regra do trapézio
+#     # M(r) = ∫[de b a r] (x * Ttt(x)) dx, onde 'b' é o primeiro valor em rs_np
+#     dr = rs_np[1] - rs_np[0]  # Assumindo espaçamento uniforme
     
-    # Usamos np.cumsum para uma aproximação da integral cumulativa
-    cumulative_integral = np.cumsum((integrand[:-1] + integrand[1:]) / 2) * dr
+#     # Usamos np.cumsum para uma aproximação da integral cumulativa
+#     cumulative_integral = np.cumsum((integrand[:-1] + integrand[1:]) / 2) * dr
     
-    # Adiciona um zero no início para que o array tenha o mesmo tamanho de rs_np
-    moment = np.insert(cumulative_integral, 0, 0)
+#     # Adiciona um zero no início para que o array tenha o mesmo tamanho de rs_np
+#     moment = np.insert(cumulative_integral, 0, 0)
 
+#     plt.figure(figsize=(8, 5))
+#     plt.plot(rs_np, moment, "--", label="Momento (PINN)", color="purple")
+#     plt.xlabel("Raio (r)")
+#     plt.ylabel("Momento M(r)")
+#     plt.title("Momento em função do Raio")
+#     plt.legend()
+#     plt.grid(True)
+#     plt.savefig("docs/moment_vs_radius.png", dpi=300)
+#     plt.show()
+#     plt.close()
+
+
+#TODO implementar uma unica função para gerar graficos de variavel vs momento
+import matplotlib.pyplot as plt
+import torch
+import numpy as np
+
+def create_trr_analitico_vs_predito_graph(rs, trr_analitico, trr_pred):
+    """
+    Cria dois gráficos separados do Trr em função do raio r:
+    - Gráfico 1: Trr Analítico
+    - Gráfico 2: Trr (PINN)
+    
+    Se os arrays não tiverem o mesmo tamanho, exibe alerta e não plota.
+    """
+
+    # Converter tensores para numpy e achatar caso seja 2D
+    if isinstance(rs, torch.Tensor):
+        rs_np = rs.detach().numpy().flatten()
+    else:
+        rs_np = np.array(rs).flatten()
+        
+    if isinstance(trr_analitico, torch.Tensor):
+        trr_analitico_np = trr_analitico.detach().numpy().flatten()
+    else:
+        trr_analitico_np = np.array(trr_analitico).flatten()
+        
+    if isinstance(trr_pred, torch.Tensor):
+        trr_pred_np = trr_pred.detach().numpy().flatten()
+    else:
+        trr_pred_np = np.array(trr_pred).flatten()
+    
+    # Verificar se os arrays têm o mesmo tamanho
+    if not (len(rs_np) == len(trr_analitico_np) == len(trr_pred_np)):
+        print(f"⚠️ Alerta: Os arrays não têm o mesmo tamanho!")
+        print(f"rs: {len(rs_np)}, trr_analitico: {len(trr_analitico_np)}, trr_pred: {len(trr_pred_np)}")
+        return  # não tenta plotar
+
+    # ---------------- Graph 1: Trr Analítico ----------------
     plt.figure(figsize=(8, 5))
-    plt.plot(rs_np, moment, "--", label="Momento (PINN)", color="purple")
+    plt.plot(rs_np, trr_analitico_np, "-", label="Trr Analítico", color="blue")
     plt.xlabel("Raio (r)")
-    plt.ylabel("Momento M(r)")
-    plt.title("Momento em função do Raio")
+    plt.ylabel("Trr M(r)")
+    plt.title("Trr Analítico em função do Raio")
     plt.legend()
     plt.grid(True)
-    plt.savefig("docs/moment_vs_radius.png", dpi=300)
+    plt.tight_layout()
+    plt.savefig("docs/trr_analitico.png", dpi=300)
     plt.show()
     plt.close()
+
+    # ---------------- Graph 2: Trr (PINN) ----------------
+    plt.figure(figsize=(8, 5))
+    plt.plot(rs_np, trr_pred_np, "--", label="Trr (PINN)", color="purple")
+    plt.xlabel("Raio (r)")
+    plt.ylabel("Trr M(r)")
+    plt.title("Trr (PINN) em função do Raio")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("docs/trr_predito.png", dpi=300)
+    plt.show()
+    plt.close()
+

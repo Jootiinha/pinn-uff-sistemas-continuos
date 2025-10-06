@@ -241,12 +241,13 @@ class PINNODE4Solver(PINNODE2Solver):
         trr_val = PDEEq.trr(phi, x_in, self)
         ttt_val = PDEEq.ttt(phi, x_in, self)
 
-        momento_val = PDEEq.momento(ttt_val, x_in)
+        momento_val= PDEEq.momento(ttt_val, x_in)
 
         return (
             phi.detach().squeeze(-1).cpu(),
             trr_val.detach().squeeze(-1).cpu(),
-            ttt_val.detach().squeeze(-1).cpu()
+            ttt_val.detach().squeeze(-1).cpu(),
+            momento_val
         )
 
     def train(self, verbose_every = 500, log_file = "training_log.csv"):

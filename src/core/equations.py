@@ -1,8 +1,9 @@
 import math
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, Callable
-
+import numpy as np
 import torch
+from scipy import integrate
 
 
 class BaseEquation:
@@ -113,28 +114,33 @@ class PDEEq(BaseEquation):
         return phi_rr
     
     @staticmethod
-    def momento(ttt_val, x_in):
-        from scipy.integrate import quad
+    def momento(ttt_val: torch.Tensor, x_in:torch.Tensor):
 
-        # Integral de A até B de (ttt_val * x dx) * -1
-        def m(x):
-            print(12*'=')
-            print(ttt_val[0])
-            print(12*'=')
-            return ttt_val[0]
+        # converter para numpy
+        ttt_np = ttt_val.detach().cpu().numpy().flatten()  # agora shape (N,)
+        x_in_np = x_in.detach().cpu().numpy().flatten()
+        print('ttt_np', ttt_np)
+        print('x_in_np', x_in_np)
+        # calcular o integrando Ttt * r
+        integrando = ttt_np * x_in_np
+
+        # integrar usando Simpson
+        M = integrate.simpson(integrando, x_in_np)
+        print("M: calculado " ,M)
+
+        return M
         
-        a = 60.0    #  a = r
-        b = 01.0    #  b = r
+    @staticmethod
+    def T_rr_analytical(r: torch.Tensor, a:float, b:float, M: float):
+        r = r.flatten()  # garante 1D
 
-        momento, _erro = quad(m, a, b)
+        term1 = (a**2 * b**2) / r**2 * torch.log(torch.tensor(b / a, dtype=torch.float32))
+        term2 = b**2 * torch.log(r / b)
+        term3 = a**2 * torch.log(a / r)
 
-        print(12*'=')
-        print(momento)
-        print(12*'=')
-
-        
-        return momento
-
+        # print("Trr analitico: " ,Trr)
+        Trr = -(4 * M) * (term1 + term2 + term3)
+        return Trr
 # ------------------------------
 # Factory
 # ------------------------------
