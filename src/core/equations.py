@@ -104,13 +104,13 @@ class PDEEq(BaseEquation):
     
     @staticmethod
     def trr(phi, x_in, solver):
-        phi_r = solver._grad(phi, x_in) * solver._scale
-        return phi_r / x_in
+        phi_r = solver._grad(phi/ x_in, x_in) 
+        return phi_r 
     
     @staticmethod
     def ttt(phi, x_in, solver):
-        phi_r = solver._grad(phi, x_in) * solver._scale
-        phi_rr = solver._grad(phi_r, x_in) * (solver._scale**2)
+        phi_r = solver._grad(phi, x_in) 
+        phi_rr = solver._grad(phi_r, x_in) 
         return phi_rr
     
     @staticmethod
@@ -134,12 +134,13 @@ class PDEEq(BaseEquation):
     def T_rr_analytical(r: torch.Tensor, a:float, b:float, M: float):
         r = r.flatten()  # garante 1D
 
-        term1 = (a**2 * b**2) / r**2 * torch.log(torch.tensor(b / a, dtype=torch.float32))
+        term1 = ((a**2 * b**2) / r**2) * torch.log(torch.tensor(b / a, dtype=torch.float32))
         term2 = b**2 * torch.log(r / b)
         term3 = a**2 * torch.log(a / r)
+        term4 = ((b**2 - a**2)**2) - 4*(a**2)*(b**2)*(torch.log(torch.tensor(b / a, dtype=torch.float32)))**2
 
         # print("Trr analitico: " ,Trr)
-        Trr = -(4 * M) * (term1 + term2 + term3)
+        Trr = ((4 * M)/(term4)) * (term1 + term2 + term3)
         return Trr
 # ------------------------------
 # Factory

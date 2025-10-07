@@ -28,7 +28,7 @@ def main():
     ]
     
     ode_cfg = TrainConfigODE2(
-        epochs=4000,
+        epochs=4500,
         n_collocation=512,
         lr=1e-3,
         hidden=64,
@@ -36,7 +36,7 @@ def main():
         device=device,
         domain=(a, b),
         w_pde=1.0,
-        w_bc=1.0,
+        w_bc=1.8,
         normalize_x=False
     )
     ode_solver = PINNODE4Solver(eq_ode, ode_cfg, bcs)
@@ -52,13 +52,20 @@ def main():
 
     phi_pred, trr_pred, ttt_pred,momento_val = ode_solver.predict_with_stress(rs)
 
+    trr_pred_M = trr_pred * 4*momento_val
     trr_analitico = PDEEq.T_rr_analytical(rs,a,b,momento_val)
 
     graphs.create_radius_graph(rs, phi_pred)
     graphs.create_stress_graph(rs, phi_pred, trr_pred, ttt_pred)
     # graphs.create_moment_graph(rs, momento_val)
-    graphs.create_trr_analitico_vs_predito_graph(rs,trr_analitico,trr_pred)
+    graphs.create_trr_analitico_vs_predito_graph(rs,trr_analitico,trr_pred_M)
+    graphs.create_trr_catia()
 
+    graphs.create_pinn_vs_analytic_report(
+        rs_pinn=rs, 
+        trr_analitico=trr_analitico, 
+        trr_pred=trr_pred_M
+    )
 
 if __name__ == "__main__":
     random.seed(0)

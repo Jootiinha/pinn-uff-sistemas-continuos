@@ -1,6 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import torch
 
 
 def create_trainning_graph():
@@ -94,36 +97,86 @@ def create_stress_graph(rs, phi_pred, trr_pred, ttt_pred):
     plt.show()
     plt.close()
 
+def create_trr_catia():
+    df = pd.read_excel('src/core/catia_data.xlsx')
+    rs = df["X(mm)"]
+    trr = df["Value(N_m2)"]
+    plt.figure(figsize=(8, 5))
+    plt.plot(rs, trr, "-", label="Trr catia", color="blue")
+    plt.xlabel("Raio (r)")
+    plt.ylabel("Trr (N_m2)")
+    plt.title("Trr catia em função do Raio")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("docs/trr_catia.png", dpi=300)
+    plt.show()
+    plt.close()
 
-# # def create_moment_graph(rs, moment):
-#     """Cria um gráfico do momento em função do raio r, calculado como a integral de r * Ttt(r)."""
-#     rs_np = rs.detach().numpy().flatten()
-#     ttt_pred_np = ttt_pred.detach().numpy().flatten()
 
-#     # Calcula o integrando: r * Ttt(r)
-#     integrand = rs_np * ttt_pred_np
+def create_pinn_vs_analytic_report(rs_pinn, trr_analitico, trr_pred):
+    """
+    Compara Trr Analítico (Verdade) e Predito (PINN), calcula as métricas 
+    de erro (MAE e MSE) e gera um gráfico de comparação.
 
-#     # Calcula a integral cumulativa usando a regra do trapézio
-#     # M(r) = ∫[de b a r] (x * Ttt(x)) dx, onde 'b' é o primeiro valor em rs_np
-#     dr = rs_np[1] - rs_np[0]  # Assumindo espaçamento uniforme
+    Args:
+        rs_pinn (array-like): Pontos de raio (r).
+        trr_analitico (array-like): Valores de Trr da solução Analítica.
+        trr_pred (array-like): Valores de Trr preditos pelo PINN.
+    """
+    print("Iniciando Relatório: PINN vs Analítico...")
+
+    # 1. Preparação e Uniformização dos Dados
+    # Converte tensores para numpy e garante que sejam arrays achatados
+    rs_pinn_np = np.array(rs_pinn).flatten()
+    trr_analitico_np = np.array(trr_analitico).flatten()
+    trr_pred_np = np.array(trr_pred).flatten()
     
-#     # Usamos np.cumsum para uma aproximação da integral cumulativa
-#     cumulative_integral = np.cumsum((integrand[:-1] + integrand[1:]) / 2) * dr
+    # Verifica se os arrays têm o mesmo tamanho
+    if not (len(rs_pinn_np) == len(trr_analitico_np) == len(trr_pred_np)):
+        print(f"⚠️ Alerta: Os arrays de entrada não têm o mesmo tamanho!")
+        return 
+        
+    # 2. Cálculo das Métricas de Erro (PINN vs Analítico)
     
-#     # Adiciona um zero no início para que o array tenha o mesmo tamanho de rs_np
-#     moment = np.insert(cumulative_integral, 0, 0)
+    # O Analítico é considerado a "verdade" (y_true)
+    mae_pinn_vs_analitico = mean_absolute_error(trr_analitico_np, trr_pred_np)
+    mse_pinn_vs_analitico = mean_squared_error(trr_analitico_np, trr_pred_np)
+    
+    metrics = {
+        'Métrica': ['MAE (Erro Absoluto Médio)', 'MSE (Erro Quadrático Médio)'],
+        'Erro (PINN vs Analítico)': [mae_pinn_vs_analitico, mse_pinn_vs_analitico]
+    }
+    
+    # 3. Criação da Tabela de Erro
+    
+    df_metrics = pd.DataFrame(metrics).set_index('Métrica')
+    print("\n" + "="*50)
+    print("Tabela de Erros: Trr PINN vs Trr Analítico")
+    print("="*50)
+    # Formatação com duas casas decimais em notação científica para clareza
+    print(df_metrics.apply(lambda x: pd.Series(["{:.2e}".format(val) for val in x], index=x.index)))
+    print("="*50 + "\n")
 
-#     plt.figure(figsize=(8, 5))
-#     plt.plot(rs_np, moment, "--", label="Momento (PINN)", color="purple")
-#     plt.xlabel("Raio (r)")
-#     plt.ylabel("Momento M(r)")
-#     plt.title("Momento em função do Raio")
-#     plt.legend()
-#     plt.grid(True)
-#     plt.savefig("docs/moment_vs_radius.png", dpi=300)
-#     plt.show()
-#     plt.close()
 
+    # 4. Criação do Gráfico de Comparação
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(rs_pinn_np, trr_analitico_np, label="Trr Analítico (Verdade)", color="red", linestyle='-', linewidth=2)
+    plt.plot(rs_pinn_np, trr_pred_np, label="Trr Predito (PINN)", color="blue", linestyle='--', linewidth=2)
+    
+    plt.xlabel("Raio (r)")
+    plt.ylabel("Trr M(r)")
+    plt.title("Comparação: Trr Analítico vs Trr Predito pelo PINN")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("docs/trr_pinn_vs_analytic_comparison.png", dpi=300)
+    plt.show()
+    plt.close()
+    
+    print("Relatório de PINN vs Analítico concluído.")
+    print("Gráfico salvo em docs/trr_pinn_vs_analytic_comparison.png")
 
 #TODO implementar uma unica função para gerar graficos de variavel vs momento
 import matplotlib.pyplot as plt

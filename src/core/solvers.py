@@ -180,18 +180,17 @@ class PINNODE4Solver(PINNODE2Solver):
 
         # Pontos de colação
         # concentrar pts em xa(1) para evitar derivadas grandes 
-        alpha = 2
-        x = torch.rand(self.cfg.n_collocation, 1, device=device)**alpha * (xb - xa) + xa
+        x = torch.rand(self.cfg.n_collocation, 1, device=device) * (xb - xa) + xa
         x.requires_grad_(True)
         x_in = self._to_model_in(x)
 
         # Saída do modelo e derivadas
         y = self.model(x_in)
         dy_dx_in = self._grad(y, x_in)
-        scale = self._scale if self.cfg.normalize_x else 1.0
-        dy = dy_dx_in * scale
+        # scale = self._scale if self.cfg.normalize_x else 1.0
+        dy = dy_dx_in
         d2y_dx_in2 = self._grad(dy_dx_in, x_in)
-        d2y = d2y_dx_in2 * (scale ** 2)
+        d2y = d2y_dx_in2 
 
         g = d2y+dy
         dg_dx_x= self._grad(g/x,x)
@@ -214,7 +213,7 @@ class PINNODE4Solver(PINNODE2Solver):
                 bc_terms.append((y_b_pred - bc.y_b) ** 2)
             elif isinstance(bc, NeumannBC):
                 dy_b_dx_in = self._grad(y_b_pred, x_b_in)
-                dy_b = dy_b_dx_in * scale
+                dy_b = dy_b_dx_in 
                 bc_terms.append((dy_b - bc.g_b) ** 2)
             elif isinstance(bc, StressBC):
                 x_b = torch.tensor([[bc.x_b]], device=device, requires_grad=True)
