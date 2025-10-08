@@ -28,7 +28,7 @@ def main():
     ]
     
     ode_cfg = TrainConfigODE2(
-        epochs=4500,
+        epochs=4000,
         n_collocation=512,
         lr=1e-3,
         hidden=64,

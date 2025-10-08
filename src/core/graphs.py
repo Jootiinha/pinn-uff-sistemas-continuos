@@ -99,8 +99,8 @@ def create_stress_graph(rs, phi_pred, trr_pred, ttt_pred):
 
 def create_trr_catia():
     df = pd.read_excel('src/core/catia_data.xlsx')
-    rs = df["X(mm)"]
-    trr = df["Value(N_m2)"]
+    rs = df["x"]
+    trr = df["T"]
     plt.figure(figsize=(8, 5))
     plt.plot(rs, trr, "-", label="Trr catia", color="blue")
     plt.xlabel("Raio (r)")
