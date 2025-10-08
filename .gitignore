@@ -5,3 +5,4 @@ __pycache__/
 
 #ignore docs created 
 /docs
+/docs_backup
