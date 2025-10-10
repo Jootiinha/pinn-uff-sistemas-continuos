@@ -8,6 +8,7 @@ from src.configs.train_configs import TrainConfigODE2
 from src.core.equations import EquationFactory, AiryStressEquation
 from src.core.solvers import PINNSolver
 from src.core import graphs
+from src.experiments.pde_4th_order import config as cfg
 
 def load_config(config_path):
     """Carrega as configurações do arquivo YAML."""
