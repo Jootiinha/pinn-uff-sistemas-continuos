@@ -1,11 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-=======
->>>>>>> main
 import torch
 
 
@@ -44,7 +41,6 @@ def create_phi_graph(x_coords: torch.Tensor, phi_pred: torch.Tensor, save_path: 
         plt.savefig(save_path, dpi=300)
     plt.show()
     plt.close()
-<<<<<<< HEAD
 
 
 def create_radius_graph(rs: any, phi_pred: any, phi_analytic: any = None):
@@ -248,5 +244,3 @@ def create_trr_analitico_vs_predito_graph(rs, trr_analitico, trr_pred):
     plt.show()
     plt.close()
 
-=======
->>>>>>> main
