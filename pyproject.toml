@@ -1,35 +1,29 @@
-[project]
+[tool.poetry]
 name = "pinn-uff-sistemas-continuos"
 version = "0.1.0"
 description = "PINN com Factory para equações algébricas e EDOs de 2ª ordem"
 authors = [
-    { name = "Joao Monteiro", email = "joaocrmonteiro@gmail.com" },
-    { name = "Ana", email = "ana.b.vasconselos98@gmail.com" }
+    "Joao Monteiro <joaocrmonteiro@gmail.com>",
+    "Ana <ana.b.vasconselos98@gmail.com>"
 ]
 readme = "README.md"
+packages = [{include = "src"}]
 
-# importante: limite superior <3.14, senão o Torch quebra
-requires-python = ">=3.11,<3.14"
-
-dependencies = [
-    "torch>=2.4,<3.0",
-    "torchvision>=0.19,<1.0",
-    "torchaudio>=2.4,<3.0",
-    "scikit-learn>=1.5,<2.0",
-    "matplotlib>=3.9,<4.0",
-    "pandas (>=2.3.3,<3.0.0)"
-]
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-package-mode = false
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+torch = ">=2.4,<3.0"
+torchvision = ">=0.19,<1.0"
+torchaudio = ">=2.4,<3.0"
+scikit-learn = ">=1.5,<2.0"
+matplotlib = ">=3.9,<4.0"
+pandas = ">=2.3.3,<3.0.0"
+scipy = ">=1.16.2,<2.0.0"
+openpyxl = ">=3.1.5,<4.0.0"
+pyyaml = ">=6.0,<7.0"
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = "^0.27.0"
+pytest = "^8.4.2"
 
-[tool.poe.tasks]
-start = "python -B -m src.app.main"
-predict = "python -B -m src.app.predict"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

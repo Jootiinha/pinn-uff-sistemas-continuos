@@ -5,5 +5,4 @@ __pycache__/
 
 #ignore docs created 
 /docs
-
-venv
+/docs_backup

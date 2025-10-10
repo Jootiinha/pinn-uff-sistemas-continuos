@@ -1,0 +1,20 @@
+# Parâmetros do Domínio
+domain:
+  a: 1.0  # Raio interno
+  b: 60.0 # Raio externo
+
+# Parâmetros de Treinamento
+training:
+  device: "cpu"
+  epochs: 4000
+  n_collocation: 512
+  learning_rate: 0.001
+  hidden_units: 64
+  network_depth: 4
+  weight_pde: 1.0
+  weight_bc: 1.8
+  normalize_x: false
+
+# Parâmetros de Avaliação
+evaluation:
+  moment_scale_factor: 4.0
