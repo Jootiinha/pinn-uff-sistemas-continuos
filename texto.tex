@@ -1,0 +1,538 @@
+\chapter{Metodo de Diferenças Finitas}
+\label{cap:MDF}
+
+\section{Contextualização do Método}
+
+O método de diferenças finitas é o método mais antigo para soluções de equações diferenciais parciais (PDEs) e normalmente utilizado para geometrias simples. O ponto de partida do método se baseia na própria definição de derivada:
+\begin{equation}
+    f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}
+\end{equation}
+Dado qualquer x em que esse limite exista, f' é a derivada de f, sendo o valor de f' em x a inclinação da reta tangente à f no ponto (x,f(x)). De acordo com Ferziger Peric (2002), o método de diferenças finitas (MDF) para aproximação de derivadas parciais, possui três maneiras de aproximação: diferença progressiva, diferença regressiva e a terceira diferença central. A tabela \ref{methodAppr} apresenta a diferença entre os três métodos.
+\begin{table}[h!]
+\label{methodAppr}
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Método} & \textbf{Aproximação} \\ \hline
+
+Forward Difference 
+& 
+$\displaystyle f'(x) \approx \frac{f(x+h) - f(x)}{h}$ 
+\\ \hline
+
+Backward Difference 
+& 
+$\displaystyle f'(x) \approx \frac{f(x) - f(x-h)}{h}$ 
+\\ \hline
+
+Central Difference 
+& 
+$\displaystyle f'(x) \approx \frac{f(x+h) - f(x-h)}{2h}$ 
+\\ \hline
+
+\end{tabular}
+\end{table}
+
+Dentre essas, a utilização da diferença central é a que melhor aproxima a solução real. Na figura~\ref{devappr}, Ferziger e Perić (2002) apresentam as três aproximações para a derivada de primeira ordem; observa-se que a diferença central é a que melhor descreve a tangente de $f(x)$.
+
+\begin{figure}
+\label{devappr}
+    \centering
+    \includegraphics[width=0.5\linewidth]{image.png}
+    \caption {Enter Caption}
+\end{figure}
+
+\section{Séries de Taylor}
+
+\subsection{Definição em uma variável}
+
+Seja $f: I \subset \mathbb{R} \to \mathbb{R}$ uma função infinitamente 
+derivável em um intervalo $I$ contendo o ponto $x_0$. A série de Taylor de 
+$f$ em torno de $x_0$ é formalmente dada por
+\begin{equation}
+    f(x) \sim \sum_{n=0}^{\infty} \frac{f^{(n)}(x_0)}{n!}(x - x_0)^n,
+\end{equation}
+onde $f^{(n)}$ denota a $n$-ésima derivada de $f$. Dizemos que a série 
+\emph{converge} para $f$ em um ponto $x$ se a soma infinita converge e o 
+valor da soma é precisamente $f(x)$.
+
+Na prática numérica, truncamos a série após um certo número de termos, 
+obtendo o \emph{polinômio de Taylor} de ordem $p$:
+\begin{equation}
+    T_p(x; x_0) = \sum_{n=0}^{p} \frac{f^{(n)}(x_0)}{n!}(x - x_0)^n.
+\end{equation}
+Escrevemos então
+\begin{equation}
+    f(x) = T_p(x; x_0) + R_{p+1}(x),
+\end{equation}
+onde $R_{p+1}(x)$ é o \emph{resto de Taylor}, que representa o erro de 
+aproximação ao truncar a série no termo de ordem $p$.
+
+\subsection{Forma do resto e ordem de aproximação}
+
+Uma forma clássica do resto (forma de Lagrange) é
+\begin{equation}
+    R_{p+1}(x) = \frac{f^{(p+1)}(\xi)}{(p+1)!}(x - x_0)^{p+1},
+\end{equation}
+para algum $\xi$ entre $x$ e $x_0$. Se tomamos $x = x_0 + h$, com $h$ 
+pequeno, obtemos
+\begin{equation}
+    R_{p+1}(x_0 + h) = \mathcal{O}(h^{p+1}),
+\end{equation}
+isto é, o erro de truncamento é proporcional a $h^{p+1}$ quando $h \to 0$. 
+
+Na notação de \emph{ordem de grandeza}, escrever
+\begin{equation}
+    f(x_0 + h) = T_p(x_0 + h; x_0) + \mathcal{O}(h^{p+1})
+\end{equation}
+significa que existe uma constante $C$ tal que
+\begin{equation}
+    |R_{p+1}(x_0 + h)| \le C |h|^{p+1}
+\end{equation}
+para $h$ suficientemente pequeno. Essa é a base para dizer que 
+um esquema numérico é de ordem $p$: o erro de truncamento decresce como 
+uma potência $p$ do parâmetro de malha $h$.
+
+Em problemas bidimensionais, costuma-se usar $h$ como um parâmetro genérico 
+de malha, por exemplo $h = \max\{h_x,h_y\}$, onde $h_x$ e $h_y$ são os passos 
+em cada direção.
+
+\subsection{Séries de Taylor como ferramenta conceitual}
+
+Nesse contexto, a série de Taylor é sobretudo uma ferramenta para descrever 
+o comportamento local da função. Ao aproximarmos $f$ por um polinômio, 
+substituímos uma função possivelmente complicada por um objeto simples de 
+manipular analiticamente e numericamente. Essa descrição local permite 
+aproximar derivadas por combinações lineares de valores de $f$, analisar a 
+precisão dessas aproximações e deduzir a ordem de um método numérico, 
+compreendendo como o erro se comporta quando refinamos a malha. Em outras 
+palavras, a expansão de Taylor fornece uma espécie de ``zoom'' local sobre 
+a função, a partir do qual se organizam, de maneira sistemática, as fórmulas 
+de diferenças finitas e a estimativa de seus erros.
+
+\section{Diferenças finitas a partir de séries de Taylor}
+
+\subsection{Discretização unidimensional}
+
+Para fixar ideias, considere uma função $f(x)$ definida em $[a,b]$. 
+Discretizamos o intervalo em pontos igualmente espaçados:
+\begin{equation}
+    x_i = a + i h, \quad i = 0,1,2,\dots,N,
+\end{equation}
+onde $h = (b-a)/N$ é o passo da malha. Em vez da função contínua $f(x)$, 
+passamos a trabalhar com os valores discretos $f_i = f(x_i)$.
+
+As fórmulas clássicas de diferenças finitas para derivadas vêm diretamente 
+das expansões de Taylor. A seguir, apresentamos as aproximações em 1D que 
+serão reutilizadas na construção de esquemas em malhas 2D.
+
+\subsection{Diferença progressiva para a primeira derivada}
+
+Considere os pontos $x_i$ e $x_{i+1} = x_i + h$. Expandindo $f$ em torno 
+de $x_i$:
+\begin{equation}
+    f(x_i + h) = f(x_i) + h f'(x_i) + \frac{h^2}{2} f''(x_i)
+                 + \frac{h^3}{6} f^{(3)}(x_i) + \cdots.
+\end{equation}
+Subtraindo $f(x_i)$ em ambos os lados e dividindo por $h$:
+\begin{equation}
+    \frac{f(x_i + h) - f(x_i)}{h}
+    = f'(x_i) + \frac{h}{2} f''(x_i) + \frac{h^2}{6} f^{(3)}(x_i) + \cdots.
+\end{equation}
+Se ignoramos os termos de ordem superior em $h$, obtemos a aproximação
+\begin{equation}
+    f'(x_i) \approx \frac{f(x_{i+1}) - f(x_i)}{h},
+\end{equation}
+chamada de \emph{diferença progressiva}. O desenvolvimento acima mostra que
+\begin{equation}
+    f'(x_i) = \frac{f(x_{i+1}) - f(x_i)}{h} + \mathcal{O}(h),
+\end{equation}
+isto é, a fórmula é de \emph{primeira ordem}.
+
+\subsection{Diferença regressiva e central}
+
+De forma análoga, obtemos a \emph{diferença regressiva}
+\begin{equation}
+    f'(x_i) \approx \frac{f(x_i) - f(x_{i-1})}{h}
+    \quad \text{com erro } \mathcal{O}(h),
+\end{equation}
+e a \emph{diferença central}
+\begin{equation}
+    f'(x_i) \approx \frac{f(x_{i+1}) - f(x_{i-1})}{2h}
+    \quad \text{com erro } \mathcal{O}(h^2).
+\end{equation}
+
+\subsection{Diferença central para a segunda derivada em 1D}
+
+Para a segunda derivada, a combinação das expansões em $x_i \pm h$
+leva à fórmula central clássica
+\begin{equation}
+    f''(x_i) \approx \frac{f(x_{i+1}) - 2f(x_i) + f(x_{i-1})}{h^2},
+\end{equation}
+com erro de truncamento local $\mathcal{O}(h^2)$. Essa expressão será o 
+bloco básico para a discretização de derivadas segundas em cada direção de 
+uma malha bidimensional.
+
+\subsection{Extensão para uma malha bidimensional}
+
+Agora consideramos uma função $u(x,y)$ definida em um retângulo
+\begin{equation}
+    \Omega = (a,b) \times (c,d).
+\end{equation}
+Introduzimos uma malha cartesiana uniforme:
+\begin{equation}
+    x_i = a + i h_x, \quad i = 0,1,\dots,N_x,
+    \qquad
+    y_j = c + j h_y, \quad j = 0,1,\dots,N_y,
+\end{equation}
+onde $h_x = (b-a)/N_x$ e $h_y = (d-c)/N_y$. A aproximação discreta de 
+$u(x,y)$ é dada pelos valores
+\begin{equation}
+    u_{i,j} \approx u(x_i,y_j).
+\end{equation}
+
+A partir das fórmulas unidimensionais, obtemos aproximações para as 
+derivadas parciais de segunda ordem em cada direção. Em $x$:
+\begin{equation}
+    u_{xx}(x_i,y_j) \approx 
+    \frac{u_{i+1,j} - 2u_{i,j} + u_{i-1,j}}{h_x^2},
+\end{equation}
+com erro de truncamento $\mathcal{O}(h_x^2)$, e, em $y$:
+\begin{equation}
+    u_{yy}(x_i,y_j) \approx 
+    \frac{u_{i,j+1} - 2u_{i,j} + u_{i,j-1}}{h_y^2},
+\end{equation}
+com erro de truncamento $\mathcal{O}(h_y^2)$.
+
+Para operadores que envolvem a soma dessas derivadas (como o Laplaciano),
+a combinação dessas expressões leva naturalmente ao \emph{esquema em malha 2D}
+que será utilizado no exemplo de equação elíptica.
+
+\section{Erro de truncamento, consistência, estabilidade e convergência}
+
+\subsection{Erro local de truncamento}
+
+Seja $\mathcal{L}$ um operador diferencial atuando sobre uma função suave 
+$u$ e $\mathcal{L}_h$ um operador discreto, dependente do parâmetro de malha 
+$h$ (em 2D, pode-se tomar $h = \max\{h_x,h_y\}$). Em um ponto de malha 
+$(x_i,y_j)$, o \emph{erro local de truncamento} é definido por
+\begin{equation}
+    \tau_h(x_i,y_j) 
+    = \mathcal{L}[u](x_i,y_j) - \mathcal{L}_h[u](x_i,y_j).
+\end{equation}
+Usando expansões de Taylor em torno de $(x_i,y_j)$, escreve-se
+\begin{equation}
+    \tau_h(x_i,y_j) = C\,h^p + \mathcal{O}(h^{p+1}),
+\end{equation}
+para algum $p \ge 1$ e constante $C$ que depende de derivadas de ordem mais 
+alta de $u$. Nesse caso, dizemos que o esquema é de \emph{ordem $p$}. De 
+forma mais compacta, costuma-se escrever
+\begin{equation}
+    \tau_h(x_i,y_j) = \mathcal{O}(h^p).
+\end{equation}
+
+A ordem do erro de truncamento fornece a taxa com que o erro numérico tende 
+a zero quando a malha é refinada. Em problemas bem postos, essa informação 
+se traduz na taxa de convergência da solução discreta, desde que o esquema 
+seja estável.
+
+\subsection{Consistência, estabilidade e convergência}
+
+Considere um problema contínuo, por exemplo um problema de valor de contorno,
+\begin{equation}
+    \mathcal{L}[u](x,y) = g(x,y), \quad (x,y) \in \Omega,
+\end{equation}
+com condições de contorno apropriadas em $\partial\Omega$. A discretização 
+leva a um problema em malha:
+\begin{equation}
+    \mathcal{L}_h[u_h](x_i,y_j) = g(x_i,y_j),
+\end{equation}
+para os nós internos $(x_i,y_j)$, acompanhado de condições de contorno 
+discretizadas nos nós da borda. Denotamos por $u_h$ a solução numérica 
+obtida pelo método de diferenças finitas em uma malha de passo $h$ 
+(ou $(h_x,h_y)$ em duas dimensões), e por $u$ a solução exata do 
+problema contínuo.
+
+Três conceitos são centrais nessa análise. O primeiro é o de \textbf{consistência}. 
+Dizemos que o esquema é consistente se o erro de truncamento $\tau_h(x_i,y_j)$ 
+tende a zero quando $h \to 0$, isto é, se $\mathcal{L}_h[u](x_i,y_j)$ se aproxima 
+de $\mathcal{L}[u](x_i,y_j)$ para funções suaves $u$. Em termos de Taylor, isso 
+é garantido quando o erro de truncamento é de ordem positiva em $h$ (por exemplo, 
+$\mathcal{O}(h)$, $\mathcal{O}(h^2)$ e assim por diante).
+
+O segundo conceito é o de \textbf{estabilidade}. Um esquema é estável quando 
+perturbações nos dados (incluindo erros de arredondamento) não são amplificadas 
+de forma descontrolada pelo processo numérico. Em problemas elípticos 
+discretizados em malhas bidimensionais, a estabilidade costuma estar associada 
+ao fato de a matriz do sistema linear ser bem condicionada e satisfazer 
+propriedades como um princípio do máximo discreto. Já em problemas evolutivos 
+(do tipo $u_t = \mathcal{L}[u]$), a estabilidade em esquemas explícitos 
+frequentemente impõe restrições do tipo CFL (\emph{Courant--Friedrichs--Lewy}), 
+que ligam o passo de tempo $\Delta t$ aos passos espaciais $h_x$ e $h_y$, 
+surgindo condições típicas do tipo
+\[
+   \Delta t \le C \,\min\{h_x^2,h_y^2\},
+\]
+para alguma constante $C>0$ dependente do problema.
+
+Por fim, temos a \textbf{convergência}. Um esquema é convergente se a solução 
+numérica $u_h$ se aproxima da solução exata $u$ quando $h \to 0$ (e, em problemas 
+dependentes do tempo, também quando $\Delta t \to 0$). Em problemas lineares bem 
+postos, um resultado fundamental garante que, sob hipóteses adequadas, 
+consistência e estabilidade em conjunto implicam convergência: em termos 
+informais, se o esquema reproduz corretamente a equação e não amplifica 
+descontroladamente os erros, então a solução discreta tende à solução contínua.
+
+As expansões de Taylor são a ferramenta padrão para verificar a consistência 
+e determinar a ordem de um esquema em malhas 2D. Já a estabilidade é tratada 
+por técnicas específicas ao tipo de equação (elíptica, parabólica, hiperbólica) 
+e ao formato da discretização (explícita, implícita ou mista).
+
+\section{Exemplo: equação elíptica bidimensional}
+
+\subsection{Formulação contínua e condições de contorno}
+
+Considere o problema de valor de contorno bidimensional
+\begin{equation}
+    -\left(u_{xx}(x,y) + u_{yy}(x,y)\right) = f(x,y), 
+    \quad (x,y) \in \Omega = (a,b) \times (c,d),
+\end{equation}
+com condições de contorno de Dirichlet prescritas na borda:
+\begin{equation}
+    u(x,y) = g(x,y), \quad (x,y) \in \partial\Omega.
+\end{equation}
+O objetivo é aproximar numericamente $u(x,y)$ em uma malha 2D.
+
+\subsection{Discretização do domínio 2D}
+
+Discretizamos $\Omega$ em uma malha cartesiana uniforme:
+\begin{equation}
+    x_i = a + i h_x, \quad i = 0,1,\dots,N_x,
+    \qquad
+    y_j = c + j h_y, \quad j = 0,1,\dots,N_y,
+\end{equation}
+e definimos
+\begin{equation}
+    u_{i,j} \approx u(x_i,y_j), 
+    \qquad
+    f_{i,j} = f(x_i,y_j), 
+    \qquad
+    g_{i,j} = g(x_i,y_j).
+\end{equation}
+
+Os nós de contorno são aqueles para os quais $i=0$ ou $i=N_x$, ou ainda 
+$j=0$ ou $j=N_y$. Neles, as condições de Dirichlet impõem diretamente:
+\begin{equation}
+    u_{i,j} = g_{i,j}, \quad \text{para } (i,j) \text{ na borda da malha}.
+\end{equation}
+
+Os nós internos são aqueles com $1 \le i \le N_x-1$ e 
+$1 \le j \le N_y-1$, onde a equação diferencial deve ser aproximada.
+
+\subsection{Aproximação do Laplaciano em 2D}
+
+No interior da malha, aproximamos as derivadas segundas por diferenças centrais:
+\begin{align}
+    u_{xx}(x_i,y_j) &\approx 
+    \frac{u_{i+1,j} - 2u_{i,j} + u_{i-1,j}}{h_x^2}, \\
+    u_{yy}(x_i,y_j) &\approx 
+    \frac{u_{i,j+1} - 2u_{i,j} + u_{i,j-1}}{h_y^2}.
+\end{align}
+Substituindo na equação contínua, obtemos, para cada nó interno $(i,j)$:
+\begin{equation}
+    -\left(
+      \frac{u_{i+1,j} - 2u_{i,j} + u_{i-1,j}}{h_x^2}
+      + 
+      \frac{u_{i,j+1} - 2u_{i,j} + u_{i,j-1}}{h_y^2}
+    \right)
+    = f_{i,j}.
+\end{equation}
+
+Reorganizando os termos em $u_{i,j}$:
+\begin{equation}
+    \left(
+      \frac{2}{h_x^2} + \frac{2}{h_y^2}
+    \right) u_{i,j}
+    - \frac{1}{h_x^2}\left(u_{i+1,j} + u_{i-1,j}\right)
+    - \frac{1}{h_y^2}\left(u_{i,j+1} + u_{i,j-1}\right)
+    = f_{i,j}.
+\end{equation}
+
+Quando um dos vizinhos $(i\pm1,j)$ ou $(i,j\pm1)$ está na borda da malha, 
+o valor correspondente de $u$ é conhecido pela condição de contorno e pode 
+ser movido para o lado direito da equação. O resultado é um sistema linear 
+para os valores desconhecidos $u_{i,j}$ nos nós internos.
+
+Pelas expansões de Taylor em cada direção, temos
+\begin{equation}
+    u_{xx}(x_i,y_j) 
+      = \frac{u_{i+1,j} - 2u_{i,j} + u_{i-1,j}}{h_x^2}
+        + \mathcal{O}(h_x^2),
+    \qquad
+    u_{yy}(x_i,y_j) 
+      = \frac{u_{i,j+1} - 2u_{i,j} + u_{i,j-1}}{h_y^2}
+        + \mathcal{O}(h_y^2),
+\end{equation}
+de modo que o erro de truncamento local do esquema para o Laplaciano é
+\begin{equation}
+    \tau_h(x_i,y_j) = \mathcal{O}(h_x^2 + h_y^2).
+\end{equation}
+Se $h_x$ e $h_y$ são da mesma ordem de grandeza, podemos escrever 
+simplesmente $\tau_h(x_i,y_j) = \mathcal{O}(h^2)$, o que mostra que o 
+esquema é de segunda ordem em malhas 2D.
+
+\subsection{Comentário sobre estabilidade e convergência}
+
+Para esse problema elíptico estacionário com condições de Dirichlet, a 
+discretização por diferenças centrais em malha cartesiana produz uma matriz 
+simétrica definida positiva, associada a um operador discreto que preserva 
+um princípio do máximo em sentido apropriado. Essas propriedades estão 
+relacionadas à estabilidade do esquema: pequenos erros nos dados ou nas 
+condições de contorno não produzem oscilações artificiais de grande 
+amplitude na solução discreta.
+
+Como o esquema é consistente de ordem dois e estável, e o problema contínuo 
+é bem posto, obtém-se convergência da solução numérica $u_h$ para a solução 
+exata $u$, com erro global tipicamente da ordem de $h^2$ em normas adequadas.
+
+
+\section{Condições de contorno em malhas bidimensionais}
+
+Para obter uma solução única para o problema contínuo e para a sua formulação 
+discreta, é necessário especificar condições de contorno no bordo do domínio. 
+Em uma malha 2D, isso significa prescrever informações nos nós que pertencem
+às linhas e colunas de fronteira, por exemplo $i=0$, $i=N_x$, $j=0$ e $j=N_y$.
+
+As duas classes mais comuns de condições de contorno são:
+
+\begin{itemize}
+    \item \emph{Condições de Dirichlet}: o valor da variável é conhecido 
+    no contorno. Em termos discretos, temos
+    \[
+    u_{i,j} = u^{\text{bc}}_{i,j} 
+    \quad \text{para } (x_i,y_j) \in \partial\Omega,
+    \]
+    onde $u^{\text{bc}}_{i,j}$ é o valor prescrito no contorno.
+    
+    \item \emph{Condições de Neumann}: o gradiente normal da variável é 
+    conhecido no contorno. Em uma fronteira $x=a$, por exemplo, temos
+    \[
+    \pd{u}{n} = \pd{u}{x} = g(y) \quad \text{em } x=a,
+    \]
+    e, na forma discreta, pode-se utilizar uma fórmula de diferença finita 
+    apropriada, como
+    \[
+    \left(\pd{u}{x}\right)_{0,j}
+    \approx \frac{u_{1,j} - u_{0,j}}{h_x} = g(y_j),
+    \]
+    ou esquemas de ordem mais alta, dependendo do problema.
+\end{itemize}
+
+Quando a condição de contorno envolve derivadas e não há ponto de malha 
+imediatamente fora do domínio, é comum introduzir pontos fictícios 
+(\emph{ghost points}) para fechar o sistema de equações. Nesses casos, 
+a condição de contorno é discretizada de modo a relacionar o valor no 
+ponto fictício com os valores internos, eliminando explicitamente a 
+variável extra.
+
+\subsection{Condições de contorno no interior do sistema discreto}
+
+Segundo Ferziger e Perić (2002), uma vez conhecidos os valores da variável 
+na fronteira (Dirichlet) ou o seu gradiente (Neumann), essas informações 
+são incorporadas diretamente nas equações de diferenças finitas dos pontos 
+de fronteira ou de seus vizinhos imediatos. Na prática, isso significa:
+
+\begin{itemize}
+    \item substituir os valores prescritos em Dirichlet diretamente nas 
+    equações (ou no vetor de termos conhecidos);
+    \item no caso de Neumann, reescrever a derivada normal por uma 
+    aproximação por diferenças finitas e, a partir dela, obter uma relação
+    discreta que entra como equação adicional ou que elimina um valor
+    de contorno em favor de valores internos.
+\end{itemize}
+
+
+
+\section{Sistema de equações algébricas}
+
+A aproximação por diferenças finitas produz, em geral, uma equação algébrica
+para cada ponto interno da malha. Para problemas lineares, o resultado da 
+discretização pode ser escrito na forma
+\begin{equation}
+\label{system}
+A_p \,u_p + \sum_{l} A_l \,u_l = Q_p,
+\end{equation}
+onde:
+\begin{itemize}
+    \item $p$ representa o ponto central da \emph{molécula computacional}
+    (por exemplo $(i,j)$ em 2D);
+    \item o índice $l$ percorre os pontos vizinhos que aparecem na 
+    aproximação (por exemplo, norte, sul, leste, oeste na fórmula de cinco pontos);
+    \item $A_p$ e $A_l$ são coeficientes que dependem dos parâmetros físicos 
+    (como coeficientes de difusão e convecção) e dos passos de malha;
+    \item $Q_p$ reúne termos fonte e contribuições das condições de contorno.
+\end{itemize}
+
+No caso de uma molécula computacional de cinco pontos para o Laplaciano em 
+uma malha uniforme com $h_x = h_y = h$, a equação em um ponto interno $(i,j)$ 
+pode ser escrita como
+\begin{equation}
+\label{system_laplace_2d}
+- u_{i-1,j} - u_{i+1,j} - u_{i,j-1} - u_{i,j+1} + 4u_{i,j}
+= h^2 f_{i,j},
+\end{equation}
+onde $f_{i,j} \approx f(x_i,y_j)$ é o termo fonte avaliado no ponto 
+$(x_i,y_j)$. Comparando com \eqref{system}, vemos que $A_p = 4$, os 
+coeficientes dos vizinhos são $A_l = -1$ e $Q_p = h^2 f_{i,j}$ (ajustado por 
+eventuais contribuições das condições de contorno).
+
+Reunindo as equações de todos os pontos internos, obtemos um sistema linear
+esparso, que pode ser escrito em forma matricial como
+\begin{equation}
+\label{system_matrix}
+A\,\bm{u} = \bm{Q},
+\end{equation}
+onde $\bm{u}$ é o vetor que contém os valores desconhecidos 
+$u_{i,j}$ em todos os pontos internos. O número de incógnitas coincide
+com o número de equações geradas pela discretização, resultando em um 
+sistema determinado.
+
+
+
+\section{Síntese conceitual}
+
+A conexão entre séries de Taylor e o método de diferenças finitas pode ser 
+resumida em alguns pontos centrais. Em primeiro lugar, há a ideia de 
+\textbf{localidade}: séries de Taylor descrevem o comportamento local da 
+função em torno de um ponto, e diferenças finitas aproveitam essa descrição 
+para aproximar derivadas a partir de valores em nós vizinhos. Em seguida, 
+vem a forma como essas fórmulas são construídas: as expressões de diferenças 
+finitas nada mais são do que combinações lineares de valores da função 
+cujo objetivo é cancelar, nas expansões de Taylor, termos de baixa ordem em 
+$h$, isolando a derivada desejada e empurrando o erro para potências mais 
+altas de $h$.
+
+Outro aspecto importante é a \textbf{ordem do método}. A potência dominante 
+de $h$ no erro de truncamento define a ordem do esquema. Em malhas 2D, essa 
+ordem leva em conta o comportamento conjunto dos passos $h_x$ e $h_y$, mas, 
+quando ambos têm a mesma escala, é comum falar em uma única ordem global em 
+termos de um parâmetro $h$ típico da malha.
+
+Do ponto de vista analítico, a tríade \textbf{consistência, estabilidade e 
+convergência} organiza a discussão: a análise via Taylor fornece a 
+consistência e a ordem de truncamento, enquanto a estabilidade depende da 
+natureza da equação (elíptica, parabólica, hiperbólica) e do tipo de 
+esquema (explícito, implícito, misto). Em muitos problemas lineares bem 
+postos, saber que o esquema é consistente e estável é suficiente para 
+garantir que a solução numérica converge para a solução exata quando a malha 
+é refinada.
+
+Por fim, vale destacar a \textbf{generalização para malhas multidimensionais}. 
+As ideias discutidas no caso unidimensional se estendem de forma natural a 
+malhas 2D e 3D. No exemplo apresentado, a combinação das fórmulas de segunda 
+ordem em cada direção levou ao esquema clássico de cinco pontos para o 
+Laplaciano em duas dimensões, amplamente utilizado na solução numérica de 
+problemas elípticos. Séries de Taylor fornecem, assim, a linguagem e a 
+ferramenta analítica que permitem construir, interpretar e avaliar esquemas 
+de diferenças finitas em malhas bidimensionais para aproximação de derivadas 
+e solução numérica de equações diferenciais parciais.
